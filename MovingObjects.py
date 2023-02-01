@@ -40,6 +40,10 @@ class Player(pygame.sprite.Sprite):
         self.orientation = RIGHT
         self.kick = False
 
+    def set_right_player(self) -> None:
+        self.image.fill(THECOLORS['blue'])
+        self.rect.center = WIDTH - self.rect.center[0], 700
+
     def update(self) -> None:
         self.rect.x += self.move_x
         self.rect.y += self.move_y
@@ -56,6 +60,32 @@ class Player(pygame.sprite.Sprite):
             else:
                 self.rect.right = 50
 
+    def collide_ball(self, ball: Ball, left: bool, above: bool):
+        new_vel_x = 2 * self.move_x - ball.move_x
+        if new_vel_x >= 45:
+            ball.move_x = 45
+        elif new_vel_x <= -45:
+            ball.move_x = -45
+        else:
+            ball.move_x = new_vel_x
+        if left:
+            ball.rect.left = self.rect.right
+        else:
+            ball.rect.right = self.rect.left
+
+        if above:
+            new_vel_y = int(STOP_KOEF * 2 * self.move_y - ball.move_y)
+            if new_vel_y >= 45:
+                ball.move_y = 45
+            elif new_vel_y <= -45:
+                ball.move_y = -45
+            else:
+                ball.move_y = new_vel_y
+            if left:
+                ball.rect.left = self.rect.right
+            else:
+                ball.rect.right = self.rect.left
+
 
 class Leg(pygame.sprite.Sprite):
     def __init__(self, player: Player):
@@ -64,8 +94,16 @@ class Leg(pygame.sprite.Sprite):
         self.image.fill(THECOLORS['green'])
         self.image.set_alpha(100)
         self.rect = self.image.get_rect()
-        if player.orientation == LEFT:
+        self.orientation = player.orientation
+        if self.orientation == LEFT:
             self.rect.bottomright = player.rect.bottomleft
         else:
             self.rect.bottomleft = player.rect.bottomright
 
+    def make_kick(self, ball: Ball) -> None:
+        if self.rect.colliderect(ball):
+            if self.orientation == LEFT:
+                ball.move_x = max(-45, ball.move_x - 30)
+            else:
+                ball.move_x = min(45, ball.move_x + 30)
+            ball.move_y = max(-45, ball.move_y - 30)

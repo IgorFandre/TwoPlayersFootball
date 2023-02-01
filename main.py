@@ -2,66 +2,81 @@ import sys
 import pygame
 from pygame.color import THECOLORS
 
+import Maps
 from MovingObjects import Player, Ball, Leg
-from Environment import Gate, Barier
+from Environment import Gate
 from PARAMETERS import *
 
 if __name__ == '__main__':
     pygame.init()
     pygame.mixer.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    l_score = 0
-    r_score = 0
-    pygame.display.set_caption(f"My Game. Score: {r_score} : {l_score}")
+    pygame.display.set_caption(f"My Game. Score: {0} : {0}")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont('arial', 20)
 
     moving_objects = pygame.sprite.Group()
     env_sprites = pygame.sprite.Group()
-    gate_spites = pygame.sprite.Group()
+    gate_sprites = pygame.sprite.Group()
+
+    l_score = 0
+    r_score = 0
+
     l_player = Player()
     r_player = Player()
-    r_player.orientation = LEFT
-    r_player.image.fill(THECOLORS['blue'])
-    r_player.rect.center = WIDTH - l_player.rect.center[0], 700
+    r_player.set_right_player()
     ball = Ball()
-    l_gate_barier = Barier()
-    r_gate_barier = Barier()
-    r_gate_barier.rect.bottomleft = -10, r_gate_barier.rect.bottomleft[1]
-    big_barier_1 = Barier()
-    big_barier_2 = Barier()
-    grass_barier = Barier()
-    big_barier_1.image = pygame.Surface((100, 100))
-    big_barier_2.image = pygame.Surface((100, 100))
-    grass_barier.image = pygame.Surface((WIDTH, 200))
-    big_barier_1.image.fill(THECOLORS['purple'])
-    big_barier_2.image.fill(THECOLORS['purple'])
-    grass_barier.image.fill(THECOLORS['darkgreen'])
-    big_barier_1.rect = big_barier_1.image.get_rect()
-    big_barier_2.rect = big_barier_2.image.get_rect()
-    grass_barier.rect = grass_barier.image.get_rect()
-    big_barier_1.rect.center = WIDTH // 2 + 400, GROUND - 650
-    big_barier_2.rect.center = WIDTH // 2 - 400, GROUND - 650
-    grass_barier.rect.centerx = WIDTH // 2
-    grass_barier.rect.top = GROUND
-    l_gate = Gate()
-    r_gate = Gate()
-    r_gate.rect.bottomleft = 0, GROUND
     moving_objects.add(ball)
     moving_objects.add(l_player)
     moving_objects.add(r_player)
 
-    env_sprites.add(l_gate_barier)
-    env_sprites.add(r_gate_barier)
-    env_sprites.add(big_barier_1)
-    env_sprites.add(big_barier_2)
-    env_sprites.add(grass_barier)
+    l_gate = Gate()
+    r_gate = Gate()
+    r_gate.rect.bottomleft = (0, GROUND)
+    gate_sprites.add(l_gate)
+    gate_sprites.add(r_gate)
 
-    gate_spites.add(l_gate)
-    gate_spites.add(r_gate)
-
+    # bool for playing game
     running = True
+
+    # choosing map
+    number_map = 0
+    while not number_map:
+        pygame.time.delay(1)
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key in [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4,
+                                 pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9]:
+                    number_map = (event.key - 48)
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                    number_map = -1
+            if event.type == pygame.QUIT:
+                running = False
+                number_map = -1
+
+    Maps.set_base_map(env_sprites)
+
+    if number_map == 2:
+        Maps.map_1(env_sprites)
+    elif number_map == 3:
+        Maps.map_2(env_sprites)
+    elif number_map == 4:
+        pass
+    elif number_map == 5:
+        pass
+    elif number_map == 6:
+        pass
+    elif number_map == 7:
+        pass
+    elif number_map == 8:
+        pass
+    elif number_map == 9:
+        pass
+
+    # playing game
     while running:
+
         # working on fps
         clock.tick(FPS)
 
@@ -113,8 +128,10 @@ if __name__ == '__main__':
                     r_player.kick = False
 
         # save relationships between players and ball
-        l_left = l_player.rect.center[0] <= ball.rect.center[0]
-        r_left = r_player.rect.center[0] < ball.rect.center[0]
+        l_left = l_player.rect.centerx <= ball.rect.centerx
+        l_above_player = l_player.rect.top <= ball.rect.centery
+        r_left = r_player.rect.centerx < ball.rect.centerx
+        r_above_player = r_player.rect.top <= ball.rect.centery
 
         # upd positions
         ball.update()
@@ -188,16 +205,14 @@ if __name__ == '__main__':
                 elif r_player.rect.right > barier.rect.right:
                     r_player.rect.left = barier.rect.right
 
+        make_start_position = False
         if r_gate.rect.collidepoint(ball.rect.center):
             r_score += 1
-            pygame.display.set_caption(f"My Game. Score: {l_score} : {r_score}")
-            ball.rect.center = WIDTH // 2, HEIGHT // 2
-            ball.move_x = 0
-            ball.move_y = 0
-            l_player.rect.center = 100, GROUND - 80
-            r_player.rect.center = 1500, GROUND - 80
+            make_start_position = True
         if l_gate.rect.collidepoint(ball.rect.center):
             l_score += 1
+            make_start_position = True
+        if make_start_position:
             pygame.display.set_caption(f"My Game. Score: {l_score} : {r_score}")
             ball.rect.center = WIDTH // 2, HEIGHT // 2
             ball.move_x = 0
@@ -208,30 +223,20 @@ if __name__ == '__main__':
         # working with screen
         screen.fill(THECOLORS["black"])
 
-
         # making kicks
         if l_player.kick or r_player.kick:
             legs = pygame.sprite.Group()
             if l_player.kick:
                 l_leg = Leg(l_player)
-                if l_leg.rect.colliderect(ball):
-                    if l_player.orientation == LEFT:
-                        ball.move_x = max(-45, ball.move_x - 30)
-                    else:
-                        ball.move_x = min(45, ball.move_x + 30)
-                    ball.move_y = max(-45, ball.move_y - 30)
+                l_leg.make_kick(ball)
                 legs.add(l_leg)
             if r_player.kick:
                 r_leg = Leg(r_player)
                 r_leg.image.fill(THECOLORS["blue"])
-                if r_leg.rect.colliderect(ball):
-                    if r_player.orientation == LEFT:
-                        ball.move_x = max(-45, ball.move_x - 30)
-                    else:
-                        ball.move_x = min(45, ball.move_x + 30)
-                    ball.move_y = max(-45, ball.move_y - 30)
+                r_leg.make_kick(ball)
                 legs.add(r_leg)
             legs.draw(screen)
+
         # for debug
         '''
         text_left_1 = font.render(f"l_player(green): move_x = {l_player.move_x}", True, THECOLORS['white'])
@@ -249,7 +254,7 @@ if __name__ == '__main__':
 
         # draw the objects
         moving_objects.draw(screen)
-        gate_spites.draw(screen)
+        gate_sprites.draw(screen)
         env_sprites.draw(screen)
         pygame.display.flip()
 
